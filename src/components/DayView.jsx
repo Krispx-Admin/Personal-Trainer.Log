@@ -13,6 +13,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { useStore, updateDay, completeSession } from '../lib/store.js';
+import { toast } from '../lib/toast.js';
 import {
   DAY_NAMES,
   cx,
@@ -633,6 +634,10 @@ export default function DayView({
                 if (day.completed) return;
                 if (confirm('Mark this session complete?')) {
                   completeSession(clientId, weekId, dayId);
+                  toast(
+                    `Session complete — ${client.name.split(' ')[0]}'s sessions left went down by 1`,
+                    { kind: 'success' }
+                  );
                 }
               }}
             />
@@ -717,6 +722,7 @@ export default function DayView({
         dayId={dayId}
         onSave={async (preset) => {
           await addPreset(preset);
+          toast(`Preset "${preset.name}" saved`, { kind: 'success' });
         }}
       />
 

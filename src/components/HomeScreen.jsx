@@ -1122,6 +1122,7 @@ export default function HomeScreen({
         onCreate={async ({ clientId, scheduledAt, durationMinutes }) => {
           await addSchedule({ clientId, scheduledAt, durationMinutes });
           setOpenSchedule(false);
+          toast('Session scheduled', { kind: 'success' });
         }}
       />
     </div>

@@ -12,15 +12,50 @@ let loaded = false;
 let pendingSave = false;
 const listeners = new Set();
 
+// ---------- save status (for the sync indicator in the tab bar) ----------
+// 'idle' | 'pending' | 'saving' | 'saved' | 'error'
+let saveStatus = 'idle';
+const saveStatusListeners = new Set();
+let savedResetTimer = null;
+
+const setSaveStatus = (next) => {
+  saveStatus = next;
+  saveStatusListeners.forEach((l) => l(saveStatus));
+  if (next === 'saved') {
+    if (savedResetTimer) clearTimeout(savedResetTimer);
+    savedResetTimer = setTimeout(() => {
+      if (saveStatus === 'saved') setSaveStatus('idle');
+    }, 2000);
+  }
+};
+
+export const useSaveStatus = () => {
+  const [s, setS] = useState(saveStatus);
+  useEffect(() => {
+    const fn = (ns) => setS(ns);
+    saveStatusListeners.add(fn);
+    return () => saveStatusListeners.delete(fn);
+  }, []);
+  return s;
+};
+
+const runPersist = () => {
+  setSaveStatus('saving');
+  Promise.resolve(persistState(state))
+    .then(() => setSaveStatus('saved'))
+    .catch(() => setSaveStatus('error'));
+};
+
 let saveTimer = null;
 const scheduleSave = () => {
   if (!loaded) return;
   pendingSave = true;
+  setSaveStatus('pending');
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     saveTimer = null;
     pendingSave = false;
-    persistState(state);
+    runPersist();
   }, 400);
 };
 
@@ -31,7 +66,7 @@ export const flushSave = () => {
     saveTimer = null;
   }
   pendingSave = false;
-  persistState(state);
+  runPersist();
 };
 
 export const applyRemoteState = (next) => {

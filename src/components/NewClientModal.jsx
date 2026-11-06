@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Modal from './ui/Modal.jsx';
 import { addClient } from '../lib/store.js';
+import { toast } from '../lib/toast.js';
 
 const toDateInput = (d) => d.toISOString().slice(0, 10);
 
@@ -29,6 +30,7 @@ export default function NewClientModal({ open, onClose, onCreated }) {
     setName('');
     setHeight('');
     setSessions('10');
+    toast(`Client added`, { kind: 'success' });
     onCreated?.(id);
     onClose?.();
   };

@@ -1,6 +1,43 @@
-import { ArrowLeft, Plus, X, Home } from 'lucide-react';
+import { ArrowLeft, Plus, X, Cloud, CloudOff, Check } from 'lucide-react';
 import { cx, initialsOf, phaseColor } from '../lib/utils.js';
+import { useSaveStatus } from '../lib/store.js';
 import Logo from './ui/Logo.jsx';
+
+// Live sync indicator — shows the coach their edits are persisted to the
+// cloud. Sits at the right edge of the tab bar.
+function SyncBadge() {
+  const status = useSaveStatus();
+  if (status === 'idle') return null;
+  const map = {
+    pending: { label: 'Saving…', color: 'var(--c-txt-muted)', Icon: Cloud },
+    saving: { label: 'Saving…', color: 'var(--c-txt-muted)', Icon: Cloud },
+    saved: { label: 'Saved', color: '#3ADBC7', Icon: Check },
+    error: { label: 'Offline', color: 'var(--c-brand-red)', Icon: CloudOff },
+  };
+  const { label, color, Icon } = map[status] || map.pending;
+  return (
+    <div
+      className="flex items-center gap-1.5 px-3 flex-shrink-0 border-l border-border"
+      title={
+        status === 'error'
+          ? "Couldn't reach the server — changes will retry"
+          : 'Sync status'
+      }
+    >
+      <Icon
+        size={13}
+        style={{ color }}
+        className={status === 'saving' || status === 'pending' ? 'animate-pulse' : ''}
+      />
+      <span
+        className="hidden sm:inline text-[10px] uppercase tracking-wider font-semibold"
+        style={{ color }}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
 
 // Persistent top bar showing all active client sessions, like browser tabs.
 // Always visible across views once at least one session has been opened.
@@ -148,6 +185,8 @@ export default function SessionTabBar({
           <span className="hidden sm:inline">Add Tab</span>
         </button>
       </div>
+
+      <SyncBadge />
     </div>
   );
 }

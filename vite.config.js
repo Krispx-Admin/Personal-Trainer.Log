@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Repo is served at https://feskii502.github.io/Personal-Trainer.Log/
+// Repo is served at https://krispx-admin.github.io/Personal-Trainer.Log/
 // so all built asset URLs need that prefix.
 export default defineConfig({
   plugins: [react()],

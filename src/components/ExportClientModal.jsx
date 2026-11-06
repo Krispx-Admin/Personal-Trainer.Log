@@ -8,6 +8,7 @@ import {
   DAY_NAMES,
 } from '../lib/utils.js';
 import { exportClientWeeks } from '../lib/exportClient.js';
+import { toast } from '../lib/toast.js';
 
 function dayStats(d) {
   let total = 0;
@@ -95,6 +96,7 @@ export default function ExportClientModal({ open, onClose, client }) {
     setBusy(true);
     try {
       exportClientWeeks(client, chosen);
+      toast('Excel export downloaded', { kind: 'success' });
     } finally {
       setBusy(false);
     }

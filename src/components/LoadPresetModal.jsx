@@ -3,6 +3,7 @@ import { Search } from 'lucide-react';
 import Modal from './ui/Modal.jsx';
 import { useWorkoutPresets } from '../hooks/useWorkoutPresets.js';
 import { loadPresetIntoDay } from '../lib/store.js';
+import { toast } from '../lib/toast.js';
 import { cx } from '../lib/utils.js';
 
 function presetTotals(p) {
@@ -49,6 +50,7 @@ export default function LoadPresetModal({
     setBusy(false);
     setPickedId(null);
     onClose();
+    toast(`Loaded "${p.name}" into this day`, { kind: 'success' });
   };
 
   return (

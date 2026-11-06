@@ -12,8 +12,136 @@ const state = {
 
 const emit = () => listeners.forEach((l) => l());
 
+// ---------- rest-end chime ----------
+// Two short rising beeps via Web Audio — no asset download, works offline.
+// AudioContext must be created after a user gesture; we lazily create it on
+// the first timer start (which is always a tap).
+let audioCtx = null;
+const ensureAudio = () => {
+  try {
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) audioCtx = new Ctx();
+    }
+    if (audioCtx?.state === 'suspended') audioCtx.resume();
+  } catch {
+    /* audio unsupported — chime silently skips */
+  }
+};
+
+const playChime = () => {
+  try {
+    if (!audioCtx) return;
+    const beep = (freq, at, dur = 0.18) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, at);
+      gain.gain.exponentialRampToValueAtTime(0.35, at + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(at);
+      osc.stop(at + dur + 0.05);
+    };
+    const now = audioCtx.currentTime;
+    beep(880, now);
+    beep(1320, now + 0.22);
+  } catch {
+    /* ignore */
+  }
+};
+
+const buzz = () => {
+  try {
+    navigator.vibrate?.([180, 80, 180]);
+  } catch {
+    /* ignore */
+  }
+};
+
+// ---------- screen wake lock ----------
+// Keeps the screen on while a set timer or rest countdown runs — phones at
+// the gym otherwise dim mid-set. Re-acquires after tab switches.
+let wakeLock = null;
+let wantWake = false;
+
+const acquireWake = async () => {
+  try {
+    if (!wantWake || wakeLock || !navigator.wakeLock) return;
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => {
+      wakeLock = null;
+    });
+  } catch {
+    wakeLock = null; // denied (low battery etc.) — non-fatal
+  }
+};
+
+const releaseWake = () => {
+  wantWake = false;
+  try {
+    wakeLock?.release();
+  } catch {
+    /* ignore */
+  }
+  wakeLock = null;
+};
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && wantWake) acquireWake();
+  });
+}
+
+// ---------- expiry watcher ----------
+// One interval (only while timers exist) that fires the chime exactly when a
+// rest hits zero, then removes it from state. Also manages the wake lock.
+let watcher = null;
+
+const syncWatcher = () => {
+  const anyActive =
+    Object.keys(state.sets).length > 0 || Object.keys(state.rests).length > 0;
+
+  if (anyActive) {
+    wantWake = true;
+    acquireWake();
+    if (!watcher) {
+      watcher = setInterval(() => {
+        const now = Date.now();
+        let changed = false;
+        for (const [id, r] of Object.entries(state.rests)) {
+          if (now - r.startedAt >= r.duration * 1000) {
+            delete state.rests[id];
+            changed = true;
+            playChime();
+            buzz();
+          }
+        }
+        if (changed) emit();
+        if (
+          Object.keys(state.sets).length === 0 &&
+          Object.keys(state.rests).length === 0
+        ) {
+          clearInterval(watcher);
+          watcher = null;
+          releaseWake();
+        }
+      }, 250);
+    }
+  } else {
+    if (watcher) {
+      clearInterval(watcher);
+      watcher = null;
+    }
+    releaseWake();
+  }
+};
+
 export const startSet = (id) => {
   state.sets[id] = { startedAt: Date.now() };
+  ensureAudio();
+  syncWatcher();
   emit();
 };
 export const stopSet = (id) => {
@@ -21,6 +149,7 @@ export const stopSet = (id) => {
   if (!s) return 0;
   const elapsed = Math.floor((Date.now() - s.startedAt) / 1000);
   delete state.sets[id];
+  syncWatcher();
   emit();
   return elapsed;
 };
@@ -33,10 +162,13 @@ export const isSetRunning = (id) => !!state.sets[id];
 
 export const startRest = (id, duration, meta = {}) => {
   state.rests[id] = { startedAt: Date.now(), duration, ...meta };
+  ensureAudio();
+  syncWatcher();
   emit();
 };
 export const stopRest = (id) => {
   delete state.rests[id];
+  syncWatcher();
   emit();
 };
 export const getRestRemaining = (id) => {

@@ -1,0 +1,19 @@
+{
+  "name": "Fitats",
+  "short_name": "Fitats",
+  "description": "Trainer dashboard — clients, schedule, workout logging.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0A0A0B",
+  "theme_color": "#0A0A0B",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

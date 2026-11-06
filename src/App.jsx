@@ -9,6 +9,8 @@ import DayView from './components/DayView.jsx';
 import SettingsView from './components/SettingsView.jsx';
 import AuthView from './components/AuthView.jsx';
 import SessionTabBar from './components/SessionTabBar.jsx';
+import LoadingScreen from './components/ui/LoadingScreen.jsx';
+import Toaster from './components/ui/Toaster.jsx';
 import { useStore } from './lib/store.js';
 
 // View stack: 'home' | 'client' | 'week' | 'day' | 'settings'
@@ -70,6 +72,12 @@ export default function App() {
     };
   }, []);
 
+  // Start each view at the top — switching client → week → day previously
+  // kept the old scroll offset.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view.name, view.clientId, view.weekId, view.dayId]);
+
   const openClient = (id) => setView({ name: 'client', clientId: id });
   const openWeek = (weekId) =>
     setView({ name: 'week', clientId: view.clientId, weekId });
@@ -124,11 +132,7 @@ export default function App() {
   }, []);
 
   if (!authChecked) {
-    return (
-      <div className="min-h-screen text-txt-secondary flex items-center justify-center">
-        Loading...
-      </div>
-    );
+    return <LoadingScreen label="Fitats" />;
   }
 
   if (!session) {
@@ -140,11 +144,7 @@ export default function App() {
   }
 
   if (!storeReady) {
-    return (
-      <div className="min-h-screen text-txt-secondary flex items-center justify-center">
-        Loading your data...
-      </div>
-    );
+    return <LoadingScreen label="Loading your data" />;
   }
 
   const activeClientId = view.name === 'day' ? view.clientId : null;
@@ -233,7 +233,8 @@ function AppShell({
         onAdd={onAddSession}
         onHome={onHome}
       />
-      <div className="flex-1">{children}</div>
+      <div className="flex-1 animate-fade-in">{children}</div>
+      <Toaster />
     </div>
   );
 }
